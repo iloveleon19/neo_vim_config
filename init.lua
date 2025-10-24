@@ -62,6 +62,9 @@ Plug('akinsho/bufferline.nvim', { ['tag'] = '*' })
 -- 終端機彈窗
 Plug('akinsho/toggleterm.nvim', { ['tag'] = '*' })
 
+-- 智能關閉 buffer（避免關閉後佈局混亂）
+Plug('famiu/bufdelete.nvim')
+
 -- Telescope 模糊搜尋工具
 Plug('nvim-telescope/telescope.nvim', { ['tag'] = '0.1.8' })
 Plug('nvim-telescope/telescope-fzf-native.nvim', { ['do'] = 'make' })
@@ -449,8 +452,8 @@ require('bufferline').setup({
     style_preset = require('bufferline').style_preset.default,
     themable = true,
     numbers = "none",
-    close_command = "bdelete! %d",
-    right_mouse_command = "bdelete! %d",
+    close_command = "Bdelete! %d",  -- 使用 Bdelete 保持視窗佈局
+    right_mouse_command = "Bdelete! %d",
     left_mouse_command = "buffer %d",
     middle_mouse_command = nil,
 
@@ -525,11 +528,17 @@ require('bufferline').setup({
   },
 })
 
+-- 創建命令別名，讓 :bd 使用 Bdelete（保持視窗佈局）
+vim.cmd([[
+  command! -bang -complete=buffer -nargs=? Bd Bdelete<bang> <args>
+  cabbrev bd <c-r>=(getcmdtype()==':' && getcmdpos()==1 ? 'Bd' : 'bd')<CR>
+]])
+
 -- Bufferline 快捷鍵
 vim.keymap.set('n', '<Tab>', ':BufferLineCycleNext<CR>', { noremap = true, silent = true, desc = '下一個 buffer' })
 vim.keymap.set('n', '<S-Tab>', ':BufferLineCyclePrev<CR>', { noremap = true, silent = true, desc = '上一個 buffer' })
-vim.keymap.set('n', '<leader>bd', ':bdelete<CR>', { noremap = true, silent = true, desc = '關閉當前 buffer' })
-vim.keymap.set('n', '<leader>bD', ':bdelete!<CR>', { noremap = true, silent = true, desc = '強制關閉當前 buffer' })
+vim.keymap.set('n', '<leader>bd', ':Bdelete<CR>', { noremap = true, silent = true, desc = '關閉當前 buffer' })
+vim.keymap.set('n', '<leader>bD', ':Bdelete!<CR>', { noremap = true, silent = true, desc = '強制關閉當前 buffer' })
 vim.keymap.set('n', '<leader>bl', ':BufferLineCloseLeft<CR>', { noremap = true, silent = true, desc = '關閉左側所有 buffer' })
 vim.keymap.set('n', '<leader>br', ':BufferLineCloseRight<CR>', { noremap = true, silent = true, desc = '關閉右側所有 buffer' })
 vim.keymap.set('n', '<leader>bo', ':BufferLineCloseOthers<CR>', { noremap = true, silent = true, desc = '關閉其他 buffer' })
