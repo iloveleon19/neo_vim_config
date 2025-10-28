@@ -1,6 +1,13 @@
 -- ===========================
 -- 基本設定
 -- ===========================
+-- 設定 Leader 鍵為空白鍵（必須在所有快捷鍵設定之前）
+vim.g.mapleader = ' '
+vim.g.maplocalleader = ' '
+
+-- 檢測 Guacamole/SSH 環境，使用簡化圖標
+vim.g.use_nerd_fonts = (os.getenv("SSH_CONNECTION") == nil and os.getenv("SSH_CLIENT") == nil)
+
 vim.opt.mouse = ''
 vim.opt.encoding = 'utf-8'
 vim.opt.fileencoding = 'utf-8'
@@ -46,6 +53,23 @@ Plug('github/copilot.vim')
 -- Treesitter
 Plug('nvim-treesitter/nvim-treesitter', { ['do'] = ':TSUpdate' })
 
+-- Treesitter Context - 顯示當前程式碼上下文
+Plug('nvim-treesitter/nvim-treesitter-context')
+
+-- LSP 配置
+Plug('neovim/nvim-lspconfig')  -- LSP 配置集合
+Plug('williamboman/mason.nvim')  -- LSP 安裝管理器
+Plug('williamboman/mason-lspconfig.nvim')  -- Mason 與 lspconfig 的橋接
+
+-- 自動補全
+Plug('hrsh7th/nvim-cmp')  -- 補全引擎
+Plug('hrsh7th/cmp-nvim-lsp')  -- LSP 補全源
+Plug('hrsh7th/cmp-buffer')  -- Buffer 補全源
+Plug('hrsh7th/cmp-path')  -- 路徑補全源
+Plug('hrsh7th/cmp-cmdline')  -- 命令列補全
+Plug('L3MON4D3/LuaSnip')  -- Snippet 引擎
+Plug('saadparwaiz1/cmp_luasnip')  -- Snippet 補全源
+
 -- -- VSCode 主題
 Plug('Mofiqul/vscode.nvim')
 
@@ -68,6 +92,12 @@ Plug('famiu/bufdelete.nvim')
 -- Telescope 模糊搜尋工具
 Plug('nvim-telescope/telescope.nvim', { ['tag'] = '0.1.8' })
 Plug('nvim-telescope/telescope-fzf-native.nvim', { ['do'] = 'make' })
+
+-- Breadcrumbs - 顯示當前函數/類別位置（類似 VSCode）
+Plug('SmiteshP/nvim-navic')
+
+-- Aerial - 代碼大綱視圖（類似 VSCode Outline）
+Plug('stevearc/aerial.nvim')
 
 Plug('folke/tokyonight.nvim')
 
@@ -176,6 +206,253 @@ require('nvim-treesitter.configs').setup {
   },
 }
 
+-- ==============================
+-- nvim-treesitter-context 設定
+-- ==============================
+require('treesitter-context').setup {
+  enable = true, -- 啟用插件
+  max_lines = 0, -- 上下文最大行數（0 表示無限制）
+  min_window_height = 0, -- 最小視窗高度
+  line_numbers = true, -- 顯示行號
+  multiline_threshold = 20, -- 多行上下文的閾值
+  trim_scope = 'outer', -- 修剪範圍: 'outer' 或 'inner'
+  mode = 'cursor', -- 模式: 'cursor' 或 'topline'
+  separator = nil, -- 分隔符（nil 表示使用預設）
+  zindex = 20, -- 層級
+  on_attach = nil, -- 附加時的回調函數
+}
+
+-- Treesitter Context 快捷鍵
+vim.keymap.set('n', '<leader>tc', ':TSContextToggle<CR>', { noremap = true, silent = true, desc = '切換 Treesitter Context' })
+vim.keymap.set('n', '[c', function()
+  require('treesitter-context').go_to_context()
+end, { noremap = true, silent = true, desc = '跳轉到上下文' })
+
+-- ==============================
+-- nvim-navic 設定（Breadcrumbs）- 必須在 LSP 之前配置
+-- ==============================
+local navic = require("nvim-navic")
+
+-- 根據環境選擇圖標
+local navic_icons = vim.g.use_nerd_fonts and {
+  File          = "󰈙 ",
+  Module        = " ",
+  Namespace     = "󰌗 ",
+  Package       = " ",
+  Class         = "󰌗 ",
+  Method        = "󰆧 ",
+  Property      = " ",
+  Field         = " ",
+  Constructor   = " ",
+  Enum          = "󰕘 ",
+  Interface     = "󰕘 ",
+  Function      = "󰊕 ",
+  Variable      = "󰆧 ",
+  Constant      = "󰏿 ",
+  String        = "󰀬 ",
+  Number        = "󰎠 ",
+  Boolean       = "◩ ",
+  Array         = "󰅪 ",
+  Object        = "󰅩 ",
+  Key           = "󰌋 ",
+  Null          = "󰟢 ",
+  EnumMember    = " ",
+  Struct        = "󰌗 ",
+  Event         = " ",
+  Operator      = "󰆕 ",
+  TypeParameter = "󰊄 ",
+} or {
+  File          = "Fi ",
+  Module        = "Md ",
+  Namespace     = "NS ",
+  Package       = "Pk ",
+  Class         = "Cl ",
+  Method        = "M ",
+  Property      = "P ",
+  Field         = "Fd ",
+  Constructor   = "C ",
+  Enum          = "E ",
+  Interface     = "I ",
+  Function      = "F ",
+  Variable      = "V ",
+  Constant      = "Cs ",
+  String        = "S ",
+  Number        = "N ",
+  Boolean       = "B ",
+  Array         = "A ",
+  Object        = "O ",
+  Key           = "K ",
+  Null          = "Nl ",
+  EnumMember    = "EM ",
+  Struct        = "St ",
+  Event         = "Ev ",
+  Operator      = "Op ",
+  TypeParameter = "TP ",
+}
+
+navic.setup {
+  icons = navic_icons,
+  lsp = {
+    auto_attach = false,  -- 改為手動 attach，避免衝突
+    preference = nil,
+  },
+  highlight = true,
+  separator = " > ",
+  depth_limit = 0,
+  depth_limit_indicator = "..",
+  safe_output = true,
+  lazy_update_context = false,
+  click = false
+}
+
+-- ==============================
+-- Mason 設定（LSP 安裝管理器）
+-- ==============================
+require("mason").setup({
+  ui = {
+    icons = {
+      package_installed = "✓",
+      package_pending = "➜",
+      package_uninstalled = "✗"
+    },
+    border = "rounded",
+  }
+})
+
+-- ==============================
+-- LSP 配置
+-- ==============================
+-- 設定 LSP 的通用能力（用於補全）
+local cmp_nvim_lsp_ok, cmp_nvim_lsp = pcall(require, 'cmp_nvim_lsp')
+local capabilities = cmp_nvim_lsp_ok and cmp_nvim_lsp.default_capabilities() or vim.lsp.protocol.make_client_capabilities()
+
+-- LSP attach 時的通用配置
+local on_attach = function(client, bufnr)
+  -- 整合 navic（breadcrumbs）
+  if client.server_capabilities.documentSymbolProvider then
+    navic.attach(client, bufnr)
+  end
+
+  -- LSP 快捷鍵（僅在有 LSP 的 buffer 中生效）
+  local opts = { buffer = bufnr, noremap = true, silent = true }
+
+  -- 跳轉
+  vim.keymap.set('n', 'gd', vim.lsp.buf.definition, vim.tbl_extend('force', opts, { desc = 'LSP: 跳轉到定義' }))
+  vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, vim.tbl_extend('force', opts, { desc = 'LSP: 跳轉到聲明' }))
+  vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, vim.tbl_extend('force', opts, { desc = 'LSP: 跳轉到實現' }))
+  vim.keymap.set('n', 'gr', vim.lsp.buf.references, vim.tbl_extend('force', opts, { desc = 'LSP: 查找引用' }))
+  vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition, vim.tbl_extend('force', opts, { desc = 'LSP: 類型定義' }))
+
+  -- 文檔和提示
+  vim.keymap.set('n', 'K', vim.lsp.buf.hover, vim.tbl_extend('force', opts, { desc = 'LSP: 顯示懸停文檔' }))
+  vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, vim.tbl_extend('force', opts, { desc = 'LSP: 顯示簽名幫助' }))
+
+  -- 代碼操作
+  vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, vim.tbl_extend('force', opts, { desc = 'LSP: 重命名' }))
+  vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, vim.tbl_extend('force', opts, { desc = 'LSP: 代碼操作' }))
+  vim.keymap.set('n', '<leader>f', function() vim.lsp.buf.format { async = true } end, vim.tbl_extend('force', opts, { desc = 'LSP: 格式化代碼' }))
+
+  -- 診斷
+  vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, vim.tbl_extend('force', opts, { desc = 'LSP: 上一個診斷' }))
+  vim.keymap.set('n', ']d', vim.diagnostic.goto_next, vim.tbl_extend('force', opts, { desc = 'LSP: 下一個診斷' }))
+  vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, vim.tbl_extend('force', opts, { desc = 'LSP: 顯示診斷' }))
+  vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, vim.tbl_extend('force', opts, { desc = 'LSP: 診斷列表' }))
+end
+
+-- ==============================
+-- Mason-LSPConfig 設定
+-- ==============================
+local mason_lspconfig_ok, mason_lspconfig = pcall(require, "mason-lspconfig")
+if mason_lspconfig_ok then
+  mason_lspconfig.setup({
+    -- 自動安裝這些 LSP 伺服器
+    ensure_installed = {
+      "lua_ls",          -- Lua
+      "ts_ls",           -- TypeScript/JavaScript
+      "pyright",         -- Python
+      "gopls",           -- Go
+      "rust_analyzer",   -- Rust
+      "clangd",          -- C/C++
+      "html",            -- HTML
+      "cssls",           -- CSS
+      "jsonls",          -- JSON
+      "intelephense",    -- PHP
+    },
+    automatic_installation = true,
+  })
+end
+
+-- 配置各個 LSP 伺服器（使用新的 vim.lsp.config 或舊的 lspconfig）
+local servers = {
+  lua_ls = {
+    settings = {
+      Lua = {
+        diagnostics = {
+          globals = { 'vim' }
+        }
+      }
+    }
+  },
+  ts_ls = {},
+  pyright = {},
+  gopls = {},
+  rust_analyzer = {},
+  clangd = {},
+  html = {},
+  cssls = {},
+  jsonls = {},
+  intelephense = {},
+}
+
+-- 使用新的 API (Neovim 0.11+) 或回退到舊的 lspconfig
+if vim.lsp.config then
+  -- 使用新的 vim.lsp.config API
+  for server_name, server_config in pairs(servers) do
+    pcall(function()
+      vim.lsp.config(server_name, vim.tbl_deep_extend('force', {
+        on_attach = on_attach,
+        capabilities = capabilities,
+      }, server_config))
+      vim.lsp.enable(server_name)
+    end)
+  end
+else
+  -- 回退到舊的 lspconfig（帶警告抑制）
+  local lspconfig_ok, lspconfig = pcall(require, 'lspconfig')
+  if lspconfig_ok then
+    for server_name, server_config in pairs(servers) do
+      pcall(function()
+        lspconfig[server_name].setup(vim.tbl_deep_extend('force', {
+          on_attach = on_attach,
+          capabilities = capabilities,
+        }, server_config))
+      end)
+    end
+  end
+end
+
+-- 診斷符號設定
+local signs = { Error = "E", Warn = "W", Hint = "H", Info = "I" }
+for type, icon in pairs(signs) do
+  local hl = "DiagnosticSign" .. type
+  vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
+end
+
+-- 診斷配置
+vim.diagnostic.config({
+  virtual_text = true,
+  signs = true,
+  update_in_insert = false,
+  underline = true,
+  severity_sort = true,
+  float = {
+    border = 'rounded',
+    source = 'always',
+    header = '',
+    prefix = '',
+  },
+})
+
 -- Lua:
 -- For dark theme (neovim's default)
 vim.o.background = 'dark'
@@ -232,14 +509,297 @@ vim.api.nvim_set_hl(0, 'Whitespace', { fg = '#3E4451', ctermfg = 'DarkGray' })
 vim.api.nvim_set_hl(0, 'NonText', { fg = '#3E4451', ctermfg = 'DarkGray' })
 
 -- ==============================
+-- nvim-cmp 自動補全設定
+-- ==============================
+local cmp_ok, cmp = pcall(require, 'cmp')
+local luasnip_ok, luasnip = pcall(require, 'luasnip')
+
+if cmp_ok and luasnip_ok then
+  cmp.setup({
+  snippet = {
+    expand = function(args)
+      luasnip.lsp_expand(args.body)
+    end,
+  },
+
+  window = {
+    completion = cmp.config.window.bordered(),
+    documentation = cmp.config.window.bordered(),
+  },
+
+  mapping = cmp.mapping.preset.insert({
+    ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+    ['<C-f>'] = cmp.mapping.scroll_docs(4),
+    ['<C-Space>'] = cmp.mapping.complete(),
+    ['<C-e>'] = cmp.mapping.abort(),
+    ['<CR>'] = cmp.mapping.confirm({ select = true }),
+    ['<Tab>'] = cmp.mapping(function(fallback)
+      if cmp.visible() then
+        cmp.select_next_item()
+      elseif luasnip.expand_or_jumpable() then
+        luasnip.expand_or_jump()
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
+    ['<S-Tab>'] = cmp.mapping(function(fallback)
+      if cmp.visible() then
+        cmp.select_prev_item()
+      elseif luasnip.jumpable(-1) then
+        luasnip.jump(-1)
+      else
+        fallback()
+      end
+    end, { 'i', 's' }),
+  }),
+
+  sources = cmp.config.sources({
+    { name = 'nvim_lsp' },
+    { name = 'luasnip' },
+  }, {
+    { name = 'buffer' },
+    { name = 'path' },
+  }),
+
+  formatting = {
+    format = function(entry, vim_item)
+      -- 根據環境選擇圖標
+      local icons = vim.g.use_nerd_fonts and {
+        Text = "",
+        Method = "󰆧",
+        Function = "󰊕",
+        Constructor = "",
+        Field = "󰇽",
+        Variable = "󰂡",
+        Class = "󰠱",
+        Interface = "",
+        Module = "",
+        Property = "󰜢",
+        Unit = "",
+        Value = "󰎠",
+        Enum = "",
+        Keyword = "󰌋",
+        Snippet = "",
+        Color = "󰏘",
+        File = "󰈙",
+        Reference = "",
+        Folder = "󰉋",
+        EnumMember = "",
+        Constant = "󰏿",
+        Struct = "",
+        Event = "",
+        Operator = "󰆕",
+        TypeParameter = "󰅲",
+      } or {
+        Text = "T",
+        Method = "M",
+        Function = "F",
+        Constructor = "C",
+        Field = "Fd",
+        Variable = "V",
+        Class = "Cl",
+        Interface = "I",
+        Module = "Md",
+        Property = "P",
+        Unit = "U",
+        Value = "Val",
+        Enum = "E",
+        Keyword = "K",
+        Snippet = "S",
+        Color = "Col",
+        File = "Fi",
+        Reference = "R",
+        Folder = "Fo",
+        EnumMember = "EM",
+        Constant = "Cs",
+        Struct = "St",
+        Event = "Ev",
+        Operator = "Op",
+        TypeParameter = "TP",
+      }
+      vim_item.kind = string.format('%s %s', icons[vim_item.kind] or '', vim_item.kind)
+      vim_item.menu = ({
+        nvim_lsp = "[LSP]",
+        luasnip = "[Snippet]",
+        buffer = "[Buffer]",
+        path = "[Path]",
+      })[entry.source.name]
+      return vim_item
+    end
+  },
+})
+
+-- 命令列補全
+cmp.setup.cmdline('/', {
+  mapping = cmp.mapping.preset.cmdline(),
+  sources = {
+    { name = 'buffer' }
+  }
+})
+
+cmp.setup.cmdline(':', {
+  mapping = cmp.mapping.preset.cmdline(),
+  sources = cmp.config.sources({
+    { name = 'path' }
+  }, {
+    { name = 'cmdline' }
+  })
+  })
+else
+  vim.notify("nvim-cmp or LuaSnip not installed, please run :PlugInstall", vim.log.levels.WARN)
+end
+
+-- ==============================
+-- aerial.nvim 設定（代碼大綱）
+-- ==============================
+require('aerial').setup({
+  -- 優先使用 treesitter，如果不支持則使用 LSP
+  backends = { "treesitter", "lsp", "markdown", "man" },
+
+  layout = {
+    max_width = { 40, 0.2 },
+    width = nil,
+    min_width = 20,
+    win_opts = {},
+    default_direction = "prefer_right",
+    placement = "window",
+  },
+
+  attach_mode = "window",
+  close_automatic_events = {},
+  keymaps = {
+    ["?"] = "actions.show_help",
+    ["g?"] = "actions.show_help",
+    ["<CR>"] = "actions.jump",
+    ["<2-LeftMouse>"] = "actions.jump",
+    ["<C-v>"] = "actions.jump_vsplit",
+    ["<C-s>"] = "actions.jump_split",
+    ["p"] = "actions.scroll",
+    ["<C-j>"] = "actions.down_and_scroll",
+    ["<C-k>"] = "actions.up_and_scroll",
+    ["{"] = "actions.prev",
+    ["}"] = "actions.next",
+    ["[["] = "actions.prev_up",
+    ["]]"] = "actions.next_up",
+    ["q"] = "actions.close",
+    ["o"] = "actions.tree_toggle",
+    ["za"] = "actions.tree_toggle",
+    ["O"] = "actions.tree_toggle_recursive",
+    ["zA"] = "actions.tree_toggle_recursive",
+    ["l"] = "actions.tree_open",
+    ["zo"] = "actions.tree_open",
+    ["L"] = "actions.tree_open_recursive",
+    ["zO"] = "actions.tree_open_recursive",
+    ["h"] = "actions.tree_close",
+    ["zc"] = "actions.tree_close",
+    ["H"] = "actions.tree_close_recursive",
+    ["zC"] = "actions.tree_close_recursive",
+    ["zr"] = "actions.tree_increase_fold_level",
+    ["zR"] = "actions.tree_open_all",
+    ["zm"] = "actions.tree_decrease_fold_level",
+    ["zM"] = "actions.tree_close_all",
+    ["zx"] = "actions.tree_sync_folds",
+    ["zX"] = "actions.tree_sync_folds",
+  },
+
+  lazy_load = true,
+  disable_max_lines = 10000,
+  disable_max_size = 2000000, -- 2MB
+
+  filter_kind = {
+    "Class",
+    "Constructor",
+    "Enum",
+    "Function",
+    "Interface",
+    "Module",
+    "Method",
+    "Struct",
+  },
+
+  highlight_mode = "split_width",
+  highlight_closest = true,
+  highlight_on_hover = false,
+  highlight_on_jump = 300,
+
+  icons = {},
+
+  ignore = {
+    unlisted_buffers = true,
+    filetypes = {},
+    buftypes = "special",
+    wintypes = "special",
+  },
+
+  manage_folds = false,
+  link_folds_to_tree = false,
+  link_tree_to_folds = true,
+
+  nerd_font = "auto",
+
+  on_attach = function(bufnr)
+    vim.keymap.set("n", "{", "<cmd>AerialPrev<CR>", { buffer = bufnr })
+    vim.keymap.set("n", "}", "<cmd>AerialNext<CR>", { buffer = bufnr })
+  end,
+
+  open_automatic = false,
+  post_jump_cmd = "normal! zz",
+  close_on_select = false,
+  update_events = "TextChanged,InsertLeave",
+
+  show_guides = true,
+  guides = {
+    mid_item   = "├─",
+    last_item  = "└─",
+    nested_top = "│ ",
+    whitespace = "  ",
+  },
+
+  float = {
+    border = "rounded",
+    relative = "cursor",
+    max_height = 0.9,
+    height = nil,
+    min_height = { 8, 0.1 },
+
+    override = function(conf, source_winid)
+      return conf
+    end,
+  },
+
+  treesitter = {
+    update_delay = 300,
+  },
+
+  markdown = {
+    update_delay = 300,
+  },
+
+  man = {
+    update_delay = 300,
+  },
+})
+
+-- Aerial 快捷鍵
+vim.keymap.set("n", "<leader>a", "<cmd>AerialToggle!<CR>", { desc = "開關代碼大綱 (Aerial)" })
+
+-- Mason 快捷鍵
+vim.keymap.set("n", "<leader>m", "<cmd>Mason<CR>", { desc = "開啟 Mason（LSP 管理）" })
+
+-- ==============================
 -- lualine 設定（Powerline 風格）
 -- ==============================
+-- 根據環境選擇分隔符
+local lualine_separators = vim.g.use_nerd_fonts
+  and { component = { left = '', right = '' }, section = { left = '', right = '' } }
+  or { component = { left = '|', right = '|' }, section = { left = '', right = '' } }
+
 require('lualine').setup {
   options = {
-    icons_enabled = true,
+    icons_enabled = vim.g.use_nerd_fonts,
     theme = 'tokyonight',  -- 使用 tokyonight 主題
-    component_separators = { left = '', right = '' },  -- Powerline 小分隔符
-    section_separators = { left = '', right = '' },  -- Powerline 大分隔符
+    component_separators = lualine_separators.component,  -- 分隔符
+    section_separators = lualine_separators.section,  -- 分隔符
     disabled_filetypes = {
       statusline = { 'neo-tree' },
       winbar = {},
@@ -259,11 +819,11 @@ require('lualine').setup {
     lualine_b = {
       {
         'branch',
-        icon = '',
+        icon = vim.g.use_nerd_fonts and '' or 'git',
       },
       {
         'diff',
-        symbols = { added = ' ', modified = ' ', removed = ' ' },
+        symbols = { added = '+', modified = '~', removed = '-' },
         colored = true,
       }
     },
@@ -274,8 +834,8 @@ require('lualine').setup {
         path = 1,  -- 相對路徑
         shorting_target = 40,
         symbols = {
-          modified = ' ●',
-          readonly = ' ',
+          modified = '[+]',
+          readonly = '[RO]',
           unnamed = '[No Name]',
         }
       }
@@ -285,7 +845,7 @@ require('lualine').setup {
       {
         'diagnostics',
         sources = { 'nvim_diagnostic' },
-        symbols = { error = ' ', warn = ' ', info = ' ', hint = ' ' },
+        symbols = { error = 'E:', warn = 'W:', info = 'I:', hint = 'H:' },
         colored = true,
       },
       'encoding',
@@ -317,9 +877,31 @@ require('lualine').setup {
     lualine_z = {}
   },
   tabline = {},
-  winbar = {},
-  inactive_winbar = {},
-  extensions = { 'neo-tree', 'fugitive' }
+  winbar = {
+    lualine_c = {
+      {
+        function()
+          return navic.get_location()
+        end,
+        cond = function()
+          return navic.is_available()
+        end
+      },
+    }
+  },
+  inactive_winbar = {
+    lualine_c = {
+      {
+        function()
+          return navic.get_location()
+        end,
+        cond = function()
+          return navic.is_available()
+        end
+      },
+    }
+  },
+  extensions = { 'neo-tree', 'fugitive', 'aerial' }
 }
 
 -- ==============================
@@ -327,6 +909,29 @@ require('lualine').setup {
 -- ==============================
 vim.g.better_whitespace_enabled = 1
 vim.g.strip_whitespace_on_save = 1
+
+-- ==============================
+-- nvim-web-devicons 設定（控制文件圖標）
+-- ==============================
+if not vim.g.use_nerd_fonts then
+  -- 在 SSH 環境下，覆蓋 nvim-web-devicons 使其返回空圖標
+  require('nvim-web-devicons').setup({
+    override = {},
+    default = true,
+    override_by_filename = {},
+    override_by_extension = {},
+  })
+
+  -- 完全禁用圖標顯示
+  local devicons = require('nvim-web-devicons')
+  local original_get_icon = devicons.get_icon
+  devicons.get_icon = function(...)
+    return "", ""  -- 返回空字符串和空高亮
+  end
+  devicons.get_icon_by_filetype = function(...)
+    return "", ""
+  end
+end
 
 -- ==============================
 -- nvim-window-picker 設定
@@ -347,37 +952,54 @@ require('window-picker').setup({
 -- ==============================
 -- Neo-tree 設定
 -- ==============================
+-- 根據環境選擇 Neo-tree 圖標
+local neotree_icon_config = vim.g.use_nerd_fonts and {
+  folder_closed = "",
+  folder_open = "",
+  folder_empty = "󰜌",
+  default = "",
+} or {
+  folder_closed = "[+]",
+  folder_open = "[-]",
+  folder_empty = "[ ]",
+  default = "",
+}
+
 require("neo-tree").setup({
   close_if_last_window = false, -- 當 Neo-tree 是最後一個窗口時不自動關閉
   popup_border_style = "rounded",
   enable_git_status = true,
   enable_diagnostics = true,
+  enable_refresh_on_write = true,
   default_component_configs = {
     indent = {
       indent_size = 2,
       padding = 1,
       with_markers = true,
-      indent_marker = "│",
-      last_indent_marker = "└",
+      indent_marker = vim.g.use_nerd_fonts and "│" or "|",
+      last_indent_marker = vim.g.use_nerd_fonts and "└" or "\\",
       highlight = "NeoTreeIndentMarker",
     },
-    icon = {
-      folder_closed = "",
-      folder_open = "",
-      folder_empty = "󰜌",
-      default = "*",
+    icon = neotree_icon_config,
+    modified = {
+      symbol = vim.g.use_nerd_fonts and "" or "+",
+    },
+    name = {
+      trailing_slash = false,
+      use_git_status_colors = true,
+      highlight = "NeoTreeFileName",
     },
     git_status = {
       symbols = {
-        added     = "✚",
-        modified  = "",
-        deleted   = "✖",
-        renamed   = "󰁕",
-        untracked = "",
-        ignored   = "",
-        unstaged  = "󰄱",
-        staged    = "",
-        conflict  = "",
+        added     = "+",
+        modified  = "~",
+        deleted   = "-",
+        renamed   = vim.g.use_nerd_fonts and "➜" or "R",
+        untracked = "?",
+        ignored   = "!",
+        unstaged  = vim.g.use_nerd_fonts and "✗" or "U",
+        staged    = vim.g.use_nerd_fonts and "✓" or "S",
+        conflict  = vim.g.use_nerd_fonts and "" or "C",
       }
     },
   },
@@ -436,12 +1058,31 @@ require("neo-tree").setup({
       enabled = true,
     },
     use_libuv_file_watcher = true,
+    -- 在 SSH 環境下使用簡化的組件列表
+    components = not vim.g.use_nerd_fonts and {
+      icon = function(config, node, state)
+        local icon = " "
+        if node.type == "directory" then
+          if node:is_expanded() then
+            icon = "[-]"
+          else
+            icon = "[+]"
+          end
+        else
+          icon = "   "  -- 文件前綴空格
+        end
+        return {
+          text = icon,
+          highlight = config.highlight or "NeoTreeFileIcon",
+        }
+      end,
+    } or nil,
   },
 })
 
 -- Neo-tree 快捷鍵
-vim.keymap.set('n', '<C-n>', ':Neotree toggle<CR>', { noremap = true, silent = true })
-vim.keymap.set('n', '<leader>e', ':Neotree focus<CR>', { noremap = true, silent = true })
+vim.keymap.set('n', '<leader>n', ':Neotree toggle<CR>', { noremap = true, silent = true, desc = '開關 Neo-tree' })
+vim.keymap.set('n', '<leader>e', ':Neotree focus<CR>', { noremap = true, silent = true, desc = '聚焦 Neo-tree' })
 
 -- ==============================
 -- Bufferline 設定
@@ -463,12 +1104,12 @@ require('bufferline').setup({
       style = 'icon',
     },
 
-    -- 圖標設定
-    buffer_close_icon = '󰅖',
-    modified_icon = '',
-    close_icon = '',
-    left_trunc_marker = '',
-    right_trunc_marker = '',
+    -- 圖標設定（簡化以支持 SSH/Guacamole）
+    buffer_close_icon = 'x',
+    modified_icon = '+',
+    close_icon = 'X',
+    left_trunc_marker = '<',
+    right_trunc_marker = '>',
 
     -- 長度設定
     max_name_length = 18,
@@ -496,12 +1137,15 @@ require('bufferline').setup({
     },
 
     -- 視覺設定
-    color_icons = true,
+    color_icons = vim.g.use_nerd_fonts,
     get_element_icon = function(element)
-      local icon, hl = require('nvim-web-devicons').get_icon_by_filetype(element.filetype, { default = false })
-      return icon, hl
+      if vim.g.use_nerd_fonts then
+        local icon, hl = require('nvim-web-devicons').get_icon_by_filetype(element.filetype, { default = false })
+        return icon, hl
+      end
+      return nil, nil
     end,
-    show_buffer_icons = true,
+    show_buffer_icons = vim.g.use_nerd_fonts,
     show_buffer_close_icons = true,
     show_close_icon = true,
     show_tab_indicators = true,
@@ -568,8 +1212,8 @@ local telescope = require('telescope')
 telescope.setup({
   defaults = {
     -- 預設設定
-    prompt_prefix = "🔍 ",
-    selection_caret = " ",
+    prompt_prefix = vim.g.use_nerd_fonts and "🔍 " or "> ",
+    selection_caret = vim.g.use_nerd_fonts and " " or "> ",
     path_display = { "truncate" },
     file_ignore_patterns = { "node_modules", ".git/", "%.jpg", "%.png" },
 
@@ -591,16 +1235,16 @@ telescope.setup({
 
     mappings = {
       i = {
-        -- Insert 模式下的快捷鍵
-        ["<C-j>"] = "move_selection_next",
-        ["<C-k>"] = "move_selection_previous",
-        ["<C-q>"] = "send_to_qflist",
+        -- Insert 模式下的快捷鍵（改用 Alt 避免與瀏覽器衝突）
+        ["<A-j>"] = "move_selection_next",
+        ["<A-k>"] = "move_selection_previous",
+        ["<A-q>"] = "send_to_qflist",
         ["<esc>"] = "close",
       },
       n = {
         -- Normal 模式下的快捷鍵
-        ["<C-j>"] = "move_selection_next",
-        ["<C-k>"] = "move_selection_previous",
+        ["<A-j>"] = "move_selection_next",
+        ["<A-k>"] = "move_selection_previous",
         ["q"] = "close",
       },
     },
@@ -628,10 +1272,10 @@ pcall(telescope.load_extension, 'fzf')
 local builtin = require('telescope.builtin')
 
 -- 檔案搜尋 (類似 VSCode Ctrl+P)
-vim.keymap.set('n', '<C-p>', builtin.find_files, { desc = 'Telescope: 搜尋檔案' })
+vim.keymap.set('n', '<leader>p', builtin.find_files, { desc = 'Telescope: 搜尋檔案' })
 
 -- 全域關鍵字搜尋 (類似 VSCode Ctrl+Shift+F)
-vim.keymap.set('n', '<C-f>', builtin.live_grep, { desc = 'Telescope: 全域搜尋' })
+vim.keymap.set('n', '<leader>ff', builtin.live_grep, { desc = 'Telescope: 全域搜尋' })
 
 -- 搜尋目前開啟的 buffers
 vim.keymap.set('n', '<leader>fb', builtin.buffers, { desc = 'Telescope: 搜尋 Buffers' })
@@ -656,6 +1300,20 @@ vim.keymap.set('n', '<leader>fc', builtin.git_commits, { desc = 'Telescope: Git 
 
 -- 搜尋 Git status (查看變更的檔案)
 vim.keymap.set('n', '<leader>fgs', builtin.git_status, { desc = 'Telescope: Git Status' })
+
+-- ==============================
+-- 視窗操作快捷鍵（將 Ctrl+w 改為 Alt+w）
+-- ==============================
+vim.keymap.set('n', '<A-w>h', '<C-w>h', { noremap = true, silent = true, desc = '切換到左邊視窗' })
+vim.keymap.set('n', '<A-w>j', '<C-w>j', { noremap = true, silent = true, desc = '切換到下方視窗' })
+vim.keymap.set('n', '<A-w>k', '<C-w>k', { noremap = true, silent = true, desc = '切換到上方視窗' })
+vim.keymap.set('n', '<A-w>l', '<C-w>l', { noremap = true, silent = true, desc = '切換到右邊視窗' })
+vim.keymap.set('n', '<A-w>w', '<C-w>w', { noremap = true, silent = true, desc = '切換到下一個視窗' })
+vim.keymap.set('n', '<A-w>s', '<C-w>s', { noremap = true, silent = true, desc = '水平分割視窗' })
+vim.keymap.set('n', '<A-w>v', '<C-w>v', { noremap = true, silent = true, desc = '垂直分割視窗' })
+vim.keymap.set('n', '<A-w>q', '<C-w>q', { noremap = true, silent = true, desc = '關閉視窗' })
+vim.keymap.set('n', '<A-w>=', '<C-w>=', { noremap = true, silent = true, desc = '平均分配視窗大小' })
+vim.keymap.set('n', '<A-w>o', '<C-w>o', { noremap = true, silent = true, desc = '關閉其他視窗' })
 
 -- ==============================
 -- 拼寫檢查快捷鍵
@@ -684,7 +1342,7 @@ require('toggleterm').setup({
       return vim.o.columns * 0.4
     end
   end,
-  open_mapping = [[<C-\>]],  -- Ctrl+\ 開關終端機
+  open_mapping = [[<leader>t]],  -- 空白+t 開關終端機
   hide_numbers = true,
   shade_terminals = true,
   shading_factor = 2,
@@ -719,11 +1377,12 @@ require('toggleterm').setup({
 function _G.set_terminal_keymaps()
   local opts = {buffer = 0}
   vim.keymap.set('t', '<esc>', [[<C-\><C-n>]], opts)  -- Esc 退出終端模式
-  vim.keymap.set('t', '<C-h>', [[<Cmd>wincmd h<CR>]], opts)
-  vim.keymap.set('t', '<C-j>', [[<Cmd>wincmd j<CR>]], opts)
-  vim.keymap.set('t', '<C-k>', [[<Cmd>wincmd k<CR>]], opts)
-  vim.keymap.set('t', '<C-l>', [[<Cmd>wincmd l<CR>]], opts)
-  vim.keymap.set('t', '<C-w>', [[<C-\><C-n><C-w>]], opts)
+  -- 改用 Alt 鍵避免與瀏覽器衝突（終端模式下 leader 鍵較難使用）
+  vim.keymap.set('t', '<A-h>', [[<Cmd>wincmd h<CR>]], opts)
+  vim.keymap.set('t', '<A-j>', [[<Cmd>wincmd j<CR>]], opts)
+  vim.keymap.set('t', '<A-k>', [[<Cmd>wincmd k<CR>]], opts)
+  vim.keymap.set('t', '<A-l>', [[<Cmd>wincmd l<CR>]], opts)
+  vim.keymap.set('t', '<A-w>', [[<C-\><C-n><A-w>]], opts)  -- Alt+w 作為視窗操作前綴
 end
 
 vim.cmd('autocmd! TermOpen term://*toggleterm#* lua set_terminal_keymaps()')
