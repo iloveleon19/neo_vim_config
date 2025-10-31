@@ -1043,11 +1043,12 @@ require("neo-tree").setup({
       ["?"] = "show_help",
       ["<"] = "prev_source",
       [">"] = "next_source",
+      ["H"] = "toggle_hidden",  -- 按 H 切換顯示隱藏檔案
     }
   },
   filesystem = {
     filtered_items = {
-      visible = false,
+      visible = true,  -- 顯示被過濾的項目（以不同顏色標示）
       hide_dotfiles = false,
       hide_gitignored = true,
       hide_by_name = {
