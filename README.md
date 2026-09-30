@@ -37,9 +37,11 @@ python3 scripts/plugins.py migrate
 
 neo_vim_config/
 ├── plugins.json
-├── after/plugin/     # 每個外掛一個設定檔，見下方「外掛設定」
-├── scripts/
-└── backups/
+├── after/plugin/                # 每個外掛一個設定檔，見下方「外掛設定」
+├── scripts/                     # 外掛安裝、更新、搬移腳本
+├── backups/                     # 舊設定備份，不會載入
+├── .claude/skills/nvim-config/  # 給 Claude Code 的使用與維護說明
+└── .gitignore
 ```
 
 要設定某個外掛，就新增它的 Lua 檔；Neovim 會在載入外掛後自動執行。
@@ -72,6 +74,11 @@ require('lualine').setup()
 | `lazydev.lua` | 讓 lua_ls 認得 Neovim API（寫 Neovim 設定時有 `vim.*` 補全） |
 | `nvim-cmp.lua` | 補全來源、外框、來源標示、`/` 與 `:` 補全、LSP 補全能力 |
 | `LuaSnip.lua` | 載入 friendly-snippets、`Tab` 跳片段欄位 |
+
+沒有設定檔、直接使用預設值的外掛：gitsigns（左側 git 修改標記，自動啟用）、
+nvim-treesitter-context（捲動時固定顯示所在函式，自動啟用）、vim-fugitive（`:Git`）、
+git-messenger（`:GitMessenger`）、bufdelete（`:Bdelete`）、nvim-lspconfig（LSP 設定集，
+由 mason-lspconfig 啟用）。plenary、nui、nvim-window-picker 是其他外掛使用的函式庫。
 
 ### 不使用 Nerd Font
 
