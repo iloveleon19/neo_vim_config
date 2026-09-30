@@ -1,0 +1,96 @@
+[
+  {
+    "repo": "nvim-lualine/lualine.nvim"
+  },
+  {
+    "repo": "tpope/vim-fugitive"
+  },
+  {
+    "repo": "rhysd/git-messenger.vim"
+  },
+  {
+    "repo": "lewis6991/gitsigns.nvim"
+  },
+  {
+    "repo": "nvim-treesitter/nvim-treesitter",
+    "branch": "master"
+  },
+  {
+    "repo": "nvim-treesitter/nvim-treesitter-context"
+  },
+  {
+    "repo": "nvim-neo-tree/neo-tree.nvim",
+    "branch": "v3.x"
+  },
+  {
+    "repo": "akinsho/bufferline.nvim",
+    "release": true
+  },
+  {
+    "repo": "akinsho/toggleterm.nvim",
+    "release": true
+  },
+  {
+    "repo": "famiu/bufdelete.nvim"
+  },
+  {
+    "repo": "nvim-telescope/telescope.nvim",
+    "tag": "0.1.8"
+  },
+  {
+    "repo": "nvim-telescope/telescope-fzf-native.nvim",
+    "build": "make"
+  },
+  {
+    "repo": "SmiteshP/nvim-navic"
+  },
+  {
+    "repo": "stevearc/aerial.nvim",
+    "branch": "nvim-0.11"
+  },
+  {
+    "repo": "nvim-lua/plenary.nvim"
+  },
+  {
+    "repo": "MunifTanjim/nui.nvim"
+  },
+  {
+    "repo": "s1n7ax/nvim-window-picker"
+  },
+  {
+    "repo": "neovim/nvim-lspconfig"
+  },
+  {
+    "repo": "mason-org/mason.nvim"
+  },
+  {
+    "repo": "mason-org/mason-lspconfig.nvim"
+  },
+  {
+    "repo": "folke/lazydev.nvim"
+  },
+  {
+    "repo": "hrsh7th/nvim-cmp"
+  },
+  {
+    "repo": "hrsh7th/cmp-nvim-lsp"
+  },
+  {
+    "repo": "hrsh7th/cmp-buffer"
+  },
+  {
+    "repo": "hrsh7th/cmp-path"
+  },
+  {
+    "repo": "hrsh7th/cmp-cmdline"
+  },
+  {
+    "repo": "L3MON4D3/LuaSnip"
+  },
+  {
+    "repo": "rafamadriz/friendly-snippets"
+  },
+  {
+    "repo": "saadparwaiz1/cmp_luasnip"
+  }
+]
